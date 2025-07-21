@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .move-up {
+            transform: translateY(-80px);
+            transition: transform 0.5s;
+        }
+
+        .move-down {
+            transform: translateY(0);
+            transition: transform 0.5s;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.7s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center">
+    <div class="w-full max-w-xl mx-auto mt-24">
+        <div id="input-container" class="flex flex-col items-center transition-all">
+            <input id="query" type="text" placeholder="Ask for news or send an email..."
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 shadow focus:outline-none focus:ring-2 focus:ring-blue-400 transition" />
+            <button id="submit"
+                class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition">Submit</button>
+        </div>
+        <div id="results" class="mt-10 fade-in"></div>
+    </div>
+    <script>
+        const inputContainer = document.getElementById('input-container');
+        const resultsDiv = document.getElementById('results');
+        const submitBtn = document.getElementById('submit');
+        const queryInput = document.getElementById('query');
+
+        submitBtn.onclick = async () => {
+            const query = queryInput.value.trim();
+            if (!query) return;
+            inputContainer.classList.add('move-up');
+            resultsDiv.innerHTML = '<div class="text-center text-gray-500">Loading...</div>';
+
+            // Simple intent detection for demo
+            let endpoint = "/search";
+            let payload = { query };
+            if (query.toLowerCase().includes("email to")) {
+                endpoint = "/email";
+                const emailMatch = query.match(/email to ([^:]+):(.+)/i);
+                if (emailMatch) {
+                    payload = { email: emailMatch[1].trim(), message: emailMatch[2].trim() };
+                }
+            }
+
+            const res = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+
+            if (data.type === "news") {
+                if (data.results.length === 0) {
+                    resultsDiv.innerHTML = '<div class="text-center text-gray-400">No news found.</div>';
+                } else {
+                    resultsDiv.innerHTML = data.results.map(a =>
+                        `<a href="${a.url}" target="_blank" class="block p-4 mb-2 bg-white rounded-lg shadow hover:bg-blue-50 transition">
+              <span class="font-semibold">${a.title}</span>
+            </a>`
+                    ).join('');
+                }
+            } else if (data.type === "email") {
+                resultsDiv.innerHTML = `<div class="p-6 bg-green-100 rounded-lg text-green-800 text-center shadow">${data.message}</div>`;
+            } else if (data.type === "preferences") {
+                resultsDiv.innerHTML = `<div class="p-6 bg-blue-100 rounded-lg text-blue-800 text-center shadow">Preferences: ${data.results.join(', ')}</div>`;
+            } else if (data.error) {
+                resultsDiv.innerHTML = `<div class="p-6 bg-red-100 rounded-lg text-red-800 text-center shadow">${data.error}</div>`;
+            } else {
+                resultsDiv.innerHTML = `<div class="p-6 bg-gray-100 rounded-lg text-gray-800 text-center shadow">Unknown response.</div>`;
+            }
+        };
+    </script>
+</body>
+
+</html>
