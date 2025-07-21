@@ -1,68 +1,55 @@
+import google.generativeai as genai
+import os
 from flask import Flask, render_template, request, jsonify
+
+# Import the Python functions that the AI will be able to call
 from utils import send_my_letter, fetch_news
 from db_interface import get_user_preference, add_preference, delete_preference
 
 app = Flask(__name__)
 
+# Use the user's hardcoded API key from their last successful configuration
+genai.configure(api_key="AIzaSyD8ckkffFxpDGiFnSjxe1DNROvZqAkJLtA")
+
+# Create the model and pass the functions directly as tools.
+# The SDK automatically handles schema generation, function execution,
+# and sending the results back to the model to generate a final response.
+model = genai.GenerativeModel(
+    'gemini-1.5-flash',
+    tools=[fetch_news, send_my_letter, get_user_preference, add_preference, delete_preference]
+)
+
 @app.route("/")
 def index():
     return render_template("index.html")
 
-@app.route("/search", methods=["POST"])
-def search():
-    data = request.json
-    query = data.get("query")
-    user_id = data.get("user_id")
-    if query:
-        news = fetch_news(query)
-        return jsonify({"type": "news", "results": news})
-    elif user_id:
-        prefs = get_user_preference(user_id)
-        return jsonify({"type": "preferences", "results": prefs})
-    else:
-        return jsonify({"error": "No query or user_id provided"}), 400
+@app.route("/ai", methods=["POST"])
+def ai():
+    user_message = request.json.get("message")
+    if not user_message:
+        return jsonify({"error": "No message provided"}), 400
 
-@app.route("/email", methods=["POST"])
-def email():
-    data = request.json
-    email = data.get("email")
-    message = data.get("message")
-    if email and message:
-        send_my_letter(email, message)
-        return jsonify({"type": "email", "message": "Email sent successfully!"})
-    else:
-        return jsonify({"error": "Email and message required"}), 400
+    try:
+        # Start a chat session with automatic function calling enabled.
+        # This allows for a stateful conversation where the model can make multiple
+        # function calls if needed to fulfill a single user request.
+        chat = model.start_chat(enable_automatic_function_calling=True)
+        
+        # Send the user's message and get the final response.
+        # The SDK handles the entire loop of:
+        # 1. Model -> function_call
+        # 2. SDK -> executes function
+        # 3. SDK -> sends result to Model
+        # 4. Model -> final text response
+        response = chat.send_message(user_message)
 
-@app.route("/preferences/add", methods=["POST"])
-def add_pref():
-    data = request.json
-    user_id = data.get("user_id")
-    topic = data.get("topic")
-    if user_id and topic:
-        add_preference(user_id, topic)
-        return jsonify({"message": "Preference added"})
-    else:
-        return jsonify({"error": "user_id and topic required"}), 400
-
-@app.route("/preferences/delete", methods=["POST"])
-def del_pref():
-    data = request.json
-    topic = data.get("topic")
-    if topic:
-        delete_preference(topic)
-        return jsonify({"message": "Preference deleted"})
-    else:
-        return jsonify({"error": "topic required"}), 400
-
-@app.route("/preferences/get", methods=["POST"])
-def get_pref():
-    data = request.json
-    user_id = data.get("user_id")
-    if user_id:
-        prefs = get_user_preference(user_id)
-        return jsonify({"preferences": prefs})
-    else:
-        return jsonify({"error": "user_id required"}), 400
+        # The final, user-facing text from the model.
+        return jsonify({"ai": response.text})
+    except Exception as e:
+        # Log the full error for easier debugging
+        print(f"An error occurred during AI processing: {e}")
+        # Provide a user-friendly error message
+        return jsonify({"ai": f"Sorry, an error occurred: {str(e)}"})
 
 if __name__ == "__main__":
     app.run(debug=True) 
