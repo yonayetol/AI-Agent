@@ -5,75 +5,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Metta AI Agent Chat</title>
+    <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body {
-            background: linear-gradient(135deg, #a7bfff 0%, #f3e7e9 100%);
-            min-height: 100vh;
-        }
-
-        .chat-scroll {
-            scrollbar-width: thin;
-            scrollbar-color: #818cf8 #f3e7e9;
-        }
-
-        .chat-scroll::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .chat-scroll::-webkit-scrollbar-thumb {
-            background: #818cf8;
-            border-radius: 8px;
-        }
-
-        .glow {
-            box-shadow: 0 0 16px 2px #818cf8, 0 2px 8px 0 #818cf8;
-        }
-
-        .fancy-gradient {
-            background: linear-gradient(90deg, #818cf8 0%, #f472b6 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            color: transparent;
-        }
-
-        .typing-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            margin: 0 2px;
-            background: #818cf8;
-            border-radius: 50%;
-            animation: bounce 1.2s infinite both;
-        }
-
-        .typing-dot:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .typing-dot:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-
-        @keyframes bounce {
-
-            0%,
-            80%,
-            100% {
-                transform: scale(0.8);
-            }
-
-            40% {
-                transform: scale(1.2);
-            }
-        }
-    </style>
 </head>
 
 <body class="flex flex-col items-center justify-center min-h-screen">
-    <div
-        class="w-full max-w-2xl flex flex-col h-[92vh] bg-white/80 rounded-3xl shadow-2xl overflow-hidden border-4 border-indigo-200 glow">
+    <div id="chat-container"
+        class="w-full max-w-2xl flex flex-col h-[92vh] rounded-3xl shadow-2xl overflow-hidden border-4 border-indigo-200 glow">
         <!-- Header -->
         <div
             class="flex items-center gap-4 px-8 py-5 bg-gradient-to-r from-indigo-500 to-pink-400 text-white shadow-lg">
@@ -82,8 +20,7 @@
             <span class="ml-auto text-lg italic opacity-80">"Your delightful digital companion"</span>
         </div>
         <!-- Chat Area -->
-        <div id="chat"
-            class="flex-1 overflow-y-auto px-6 py-6 chat-scroll space-y-5 bg-gradient-to-br from-indigo-50 to-pink-50">
+        <div id="chat" class="flex-1 overflow-y-auto px-6 py-6 chat-scroll space-y-5">
             <!-- Messages will appear here -->
         </div>
         <!-- Typing indicator -->
@@ -104,79 +41,7 @@
                 class="px-7 py-2 bg-gradient-to-r from-indigo-500 to-pink-400 text-white rounded-full shadow hover:from-pink-400 hover:to-indigo-500 transition font-bold text-lg">Send</button>
         </form>
     </div>
-    <script>
-        const chat = document.getElementById('chat');
-        const form = document.getElementById('chat-form');
-        const input = document.getElementById('user-input');
-        const typing = document.getElementById('typing');
-
-        // Helper to add a message bubble
-        function addMessage(text, sender = 'user') {
-            const bubble = document.createElement('div');
-            bubble.className = sender === 'user'
-                ? 'flex justify-end'
-                : 'flex justify-start';
-            bubble.innerHTML = `
-        <div class="max-w-[75%] px-6 py-4 rounded-3xl shadow-lg transition-all duration-300
-          ${sender === 'user'
-                    ? 'bg-gradient-to-r from-indigo-500 to-pink-400 text-white rounded-br-none border-2 border-indigo-200'
-                    : 'bg-white/90 text-indigo-900 rounded-bl-none border-2 border-pink-200 flex items-center gap-3'}
-        ">
-          ${sender === 'ai' ? '<span class="text-3xl">🤖</span>' : ''}
-          <span class="text-lg leading-relaxed">${text.replace(/\n/g, '<br>')}</span>
-        </div>
-      `;
-            chat.appendChild(bubble);
-            chat.scrollTop = chat.scrollHeight;
-        }
-
-        // Show/hide typing indicator
-        function showTyping(show = true) {
-            typing.style.display = show ? 'block' : 'none';
-            chat.scrollTop = chat.scrollHeight;
-        }
-
-        // Handle form submit
-        form.onsubmit = async (e) => {
-            e.preventDefault();
-            const message = input.value.trim();
-            if (!message) return;
-            addMessage(message, 'user');
-            input.value = '';
-            showTyping(true);
-
-            // Send to backend
-            const res = await fetch('/ai', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message })
-            });
-            const data = await res.json();
-            showTyping(false);
-
-            if (data.result && Array.isArray(data.result) && data.result.length > 0 && data.result[0].title && data.result[0].url) {
-                // News results
-                let newsHtml = '<div class="mb-2 font-semibold text-indigo-600">Here are some news articles I found:</div>';
-                newsHtml += data.result.map(a =>
-                    `<a href="${a.url}" target="_blank" class="block p-4 mb-2 bg-indigo-50 rounded-lg shadow hover:bg-pink-100 transition">
-                        <span class="font-semibold">${a.title}</span>
-                    </a>`
-                ).join('');
-                addMessage(newsHtml, 'ai');
-            } else if (data.ai) {
-                addMessage(data.ai, 'ai');
-            } else if (data.error) {
-                addMessage('Oops! ' + data.error, 'ai');
-            }
-        };
-
-        // Welcome message
-        window.onload = () => {
-            setTimeout(() => {
-                addMessage('Hey there! ✨ I\'m <b>Metta</b>, your delightful AI agent. Ask me anything, or just say hi! 💬', 'ai');
-            }, 400);
-        };
-    </script>
+    <script src="/static/app.js"></script>
 </body>
 
 </html>
