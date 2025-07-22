@@ -54,25 +54,27 @@ def add_preference(topic: str) -> str:
         db.rollback()
         raise e
 
-def delete_preference(topic: str) -> str:
-    """Deletes a topic from the single default user's preferences.
+def delete_preference(keyword: str) -> str:
+    """Deletes preferences that contain a specific keyword.
 
     Args:
-        topic: The exact topic to delete. For this to work, you may need to first
-               call get_user_preference() to see the exact topic names.
-        
+        keyword: The keyword to search for in the preference topics. This can be
+                 an exact match or a general term.
+
     Returns:
-        A confirmation message.
+        A confirmation message indicating which topics were deleted.
     """
     try:
         with db.cursor() as cur:
-            cur.execute("DELETE FROM preferences WHERE topic = %s AND user_id = %s", (topic, USER_ID))
-            deleted_count = cur.rowcount
+            # Use ILIKE for case-insensitive matching of the keyword
+            cur.execute("DELETE FROM preferences WHERE topic ILIKE %s AND user_id = %s RETURNING topic", (f"%{keyword}%", USER_ID))
+            deleted_topics = [row[0] for row in cur.fetchall()]
             db.commit()
-            if deleted_count > 0:
-                return f"Deleted '{topic}' from preferences."
+
+            if deleted_topics:
+                return f"Deleted preferences related to '{keyword}': {', '.join(deleted_topics)}"
             else:
-                return f"Topic '{topic}' not found in preferences."
+                return f"No preferences found related to the keyword '{keyword}'."
     except Exception as e:
         db.rollback()
-        raise e 
+        raise e
