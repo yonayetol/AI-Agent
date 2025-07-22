@@ -47,13 +47,14 @@ form.onsubmit = async (e) => {
     const data = await res.json();
     showTyping(false);
 
-    if (data.result && Array.isArray(data.result) && data.result.length > 0 && data.result[0].title && data.result[0].url) {
-        // News results
+    if (data.result && Array.isArray(data.result) && data.result.length > 0 && data.result[0].summary) {
+        // News results with summaries
         let newsHtml = '<div class="mb-2 font-semibold text-indigo-600">Here are some news articles I found:</div>';
         newsHtml += data.result.map(a =>
-            `<a href="${a.url}" target="_blank" class="block p-4 mb-2 bg-indigo-50 rounded-lg shadow hover:bg-pink-100 transition">
-          <span class="font-semibold">${a.title}</span>
-      </a>`
+            `<div class="p-4 mb-2 bg-indigo-50 rounded-lg shadow">
+                <a href="${a.url}" target="_blank" class="font-semibold text-indigo-700 hover:underline">${a.title}</a>
+                <p class="text-sm text-gray-600 mt-1">${a.summary}</p>
+            </div>`
         ).join('');
         addMessage(newsHtml, 'ai');
     } else if (data.ai) {
@@ -132,6 +133,6 @@ if (SpeechRecognition) {
 // Welcome message
 window.onload = () => {
     setTimeout(() => {
-        addMessage('Hey there! ✨ I\'m <b>Metta</b>, your delightful AI agent. Ask me anything, or just say hi! 💬', 'ai');
+        addMessage('Hey there! ✨ I\'m <b>All in One</b>, your delightful AI agent. Ask me anything, or just say hi! 💬', 'ai');
     }, 400);
 };

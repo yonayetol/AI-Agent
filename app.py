@@ -3,7 +3,7 @@ import os
 from flask import Flask, render_template, request, jsonify
 
 # Import the Python functions that the AI will be able to call
-from utils import send_my_letter, fetch_news
+from utils import send_my_letter, fetch_news, get_weather, shutdown_pc, set_alarm, take_screenshot, get_current_time
 from db_interface import get_user_preference, add_preference, delete_preference
 
 app = Flask(__name__)
@@ -16,8 +16,8 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY3"))
 # and sending the results back to the model to generate a final response.
 model = genai.GenerativeModel(
     'gemini-1.5-flash',
-    tools=[fetch_news, send_my_letter, get_user_preference, add_preference, delete_preference],
-    system_instruction="""You are a helpful and friendly AI assistant.
+    tools=[fetch_news, send_my_letter, get_user_preference, add_preference, delete_preference, get_weather, shutdown_pc, set_alarm, take_screenshot, get_current_time],
+    system_instruction="""You are All in One, a helpful and friendly AI assistant.
 When a user asks about current events, recent statements, or anything that sounds like a news query, you must use the `fetch_news` tool.
 Do not apologize for not having real-time information. Instead, use the `fetch_news` tool to find the information.
 
