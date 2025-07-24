@@ -13,7 +13,7 @@ db = connect(
     port=5432
 )
 
-USER_ID = 1  # Hardcode the single user ID
+USER_ID = 1
 
 def get_user_preference() -> List[str]:
     """Gets the preferences for the single default user.

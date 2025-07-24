@@ -1,26 +1,29 @@
-
-
-
-
-
-
+import os
+import requests
+from dotenv import load_dotenv
+from bs4 import BeautifulSoup
+import smtplib as v
+from PIL import ImageGrab
+import time
+from datetime import datetime
+# Load environment variables once when the script starts
+load_dotenv()
+ 
 def send_my_letter(email: str, message: str):
     """Sends an email to the specified address.
 
     Args:
         email: The recipient's email address.
         message: The content of the email.
-    """
-    import os
-    import smtplib as v
+    """     
     my_email = os.getenv("EMAIL_SENDER_ADDRESS")
     my_password = os.getenv('EMAIL_SENDER_PASSWORD')
-
     with v.SMTP("smtp.gmail.com") as connector:
         connector.starttls()
         connector.login(user=my_email, password=my_password)
-        connector.sendmail(from_addr=my_email, to_addrs=email, msg=f"Subject: A message from Metta\n\n{message}")
+        connector.sendmail(from_addr=my_email, to_addrs=email, msg=f"Subject: A message from All-In-One-Ai-Agent\n\n{message}")
 
+send_my_letter("yonasayeletola62@gmail.com", "Hello, this is a test message from All-In-One-Ai-Agent.")
 def fetch_news(query: str) -> list:
     """Fetches and summarizes news articles based on a query.
 
@@ -31,49 +34,69 @@ def fetch_news(query: str) -> list:
         A list of dictionaries, where each dictionary represents a news article
         with a 'title', 'url', and 'summary'.
     """
-    import os
-    import requests
-    from dotenv import load_dotenv
-    from bs4 import BeautifulSoup
-    load_dotenv()
-
-    api_token = os.getenv("NEWS_API_TOKEN")
+    print(f"Fetching news for query: {query}")
+    api_token = os.getenv("NEWS_API_TOKEN")  
     url = f"https://api.thenewsapi.com/v1/news/all?api_token={api_token}&search={query}&limit=3"
-    response = requests.get(url)
     
-    if response.status_code != 200:
-        return []
-
+    try:
+        response = requests.get(url, timeout=60)
+    except requests.exceptions.RequestException as e: return []
+    print("--------------------------------------------------------------------------------------------------------") # Improved print
+    print(f"Response status code: {response}")
+    print("--------------------------------------------------------------------------------------------------------") # Improved print
     articles = response.json().get("data", [])
-    summarized_articles = []
+    summarized_articles = [] 
+
+    headers = { # User-Agent for scraping
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
 
     for article in articles:
         try:
-            page = requests.get(article["url"])
+            # Check if URL exists before attempting to scrape
+            if not article.get("url"):
+                raise ValueError("Article URL is missing.")
+
+            page = requests.get(article["url"], headers=headers, timeout=55) # Added timeout and headers
+            page.raise_for_status() # Raises HTTPError for bad responses (4xx or 5xx)
             soup = BeautifulSoup(page.content, 'html.parser')
             
             # Find all paragraph tags and join their text
             paragraphs = soup.find_all('p')
-            text = ' '.join([p.get_text() for p in paragraphs])
+            text = ' '.join([p.get_text() for p in paragraphs if p.get_text().strip()]) # Added strip to avoid empty strings
             
-            # Create a concise summary (first 3 sentences)
-            summary = ". ".join(text.split(". ")[:3]) + "."
-            
+            # Create a concise summary (first 3 sentences) - basic heuristic
+            summary_sentences = [s.strip() for s in text.split(". ") if s.strip()] # Filter empty sentences
+            summary = ". ".join(summary_sentences[:3]) + ("." if summary_sentences else "") # Ensure period and handle empty case
+            if not summary: # Fallback if no text could be extracted
+                summary = "Content could not be extracted for summarization."
+            print("--------------------------------------------------------------------------------------------------------") # Improved print
+            print("--------------------------------------------------------------------------------------------------------") # Improved print
+            print(f"Article: {article}") 
+            print("--------------------------------------------------------------------------------------------------------") # Improved print
+            print(f"Summarized article: {summary}") # Improved print
+            print("--------------------------------------------------------------------------------------------------------") # Improved print
             summarized_articles.append({
-                "title": article["title"],
-                "url": article["url"],
+                "title": article.get("title", "No Title"), # Use .get with default
+                "url": article.get("url", "No URL"),
                 "summary": summary
             })
-        except Exception:
-            # If scraping fails, just return the title and URL
+        except requests.exceptions.RequestException as e:
+            print(f"Error scraping article '{article.get('title', 'N/A')}': {e}")
             summarized_articles.append({
-                "title": article["title"],
-                "url": article["url"],
-                "summary": "Could not summarize this article."
+                "title": article.get("title", "No Title"),
+                "url": article.get("url", "No URL"),
+                "summary": "Could not fetch or access this article content."
             })
-            
+        except Exception as e: # Catch other potential errors during parsing/summary
+            print(f"An unexpected error occurred for article '{article.get('title', 'N/A')}': {e}")
+            summarized_articles.append({
+                "title": article.get("title", "No Title"),
+                "url": article.get("url", "No URL"),
+                "summary": "Could not summarize this article due to an unexpected error."
+            })
     return summarized_articles
-
+# print(fetch_news("trump and musk conflict"))
 def get_weather(location: str) -> dict:
     """Gets the current weather for a given location.
 
@@ -82,12 +105,8 @@ def get_weather(location: str) -> dict:
 
     Returns:
         A dictionary containing the weather information.
-    """
-    import os
-    import requests
-    from dotenv import load_dotenv
-    load_dotenv()
-
+    """ 
+    print(f"Getting weather for {location}")
     api_key = os.getenv("WEATHER_API_KEY")
     url = f"http://api.weatherapi.com/v1/current.json?key={api_key}&q={location}"
     response = requests.get(url)
@@ -97,54 +116,13 @@ def get_weather(location: str) -> dict:
         return {"error": "Could not retrieve weather data."}
 
 def shutdown_pc():
-    """Shuts down the computer."""
-    import os
+    """Shuts down the computer.""" 
     os.system("shutdown /s /t 1")
     return "Shutting down the computer."
 
-def set_alarm(time_str: str):
-    """Sets an alarm for a given time.
-
-    Args:
-        time_str: The time to set the alarm for, in a format like '10:30am' or '2:00pm'.
-    """
-    import sched
-    import time
-    import threading
-    from datetime import datetime
-
-    def alarm_action():
-        print(f"ALARM! It's {time_str}.")
-
-    try:
-        alarm_time = datetime.strptime(time_str, "%I:%M%p")
-        now = datetime.now()
-        
-        alarm_today = alarm_time.replace(year=now.year, month=now.month, day=now.day)
-        
-        if alarm_today < now:
-            # If the time has already passed today, schedule it for tomorrow
-            alarm_today = alarm_today.replace(day=now.day + 1)
-            
-        delay = (alarm_today - now).total_seconds()
-        
-        s = sched.scheduler(time.time, time.sleep)
-        s.enter(delay, 1, alarm_action)
-        
-        t = threading.Thread(target=s.run)
-        t.start()
-        
-        return f"Alarm set for {time_str}."
-    except Exception as e:
-        return f"Could not set alarm. Please use a format like '10:30am'. Error: {e}"
-
 def take_screenshot():
     """Takes a screenshot of the entire screen and saves it to a file."""
-    try:
-        from PIL import ImageGrab
-        import time
-        import os
-        
+    try:        
         # Define the directory and create it if it doesn't exist
         save_dir = r"C:\Users\Vertx\Pictures\AI-AGENT-SCREENSHOTS"
         os.makedirs(save_dir, exist_ok=True)
@@ -162,5 +140,15 @@ def take_screenshot():
 
 def get_current_time():
     """Gets the current time."""
-    from datetime import datetime
     return datetime.now().strftime("%I:%M %p")
+
+
+def restart_pc():
+    """Restarts the computer.""" 
+    os.system("shutdown /r /t 1")
+    return "Restarting the computer."
+
+def lock_pc():
+    """Locks the computer.""" 
+    os.system("rundll32.exe user32.dll,LockWorkStation")
+    return "Locking the computer."

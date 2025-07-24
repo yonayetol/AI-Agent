@@ -1,22 +1,16 @@
 import google.generativeai as genai
 import os
-from flask import Flask, render_template, request, jsonify
-
-# Import the Python functions that the AI will be able to call
-from utils import send_my_letter, fetch_news, get_weather, shutdown_pc, set_alarm, take_screenshot, get_current_time
+from flask import Flask, render_template, request, jsonify 
+from utils import send_my_letter, fetch_news, get_weather, shutdown_pc, take_screenshot, get_current_time, restart_pc, lock_pc
 from db_interface import get_user_preference, add_preference, delete_preference
 
 app = Flask(__name__)
 
-# Load the API key from the environment
-genai.configure(api_key=os.getenv("GEMINI_API_KEY3"))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY2"))
 
-# Create the model and pass the functions directly as tools.
-# The SDK automatically handles schema generation, function execution,
-# and sending the results back to the model to generate a final response.
 model = genai.GenerativeModel(
-    'gemini-1.5-flash',
-    tools=[fetch_news, send_my_letter, get_user_preference, add_preference, delete_preference, get_weather, shutdown_pc, set_alarm, take_screenshot, get_current_time],
+    'gemini-2.0-flash',
+    tools=[fetch_news, send_my_letter, get_user_preference, add_preference, delete_preference, get_weather, shutdown_pc, take_screenshot, get_current_time, restart_pc, lock_pc],
     system_instruction="""You are All in One, a helpful and friendly AI assistant.
 When a user asks about current events, recent statements, or anything that sounds like a news query, you must use the `fetch_news` tool.
 Do not apologize for not having real-time information. Instead, use the `fetch_news` tool to find the information.
@@ -39,28 +33,14 @@ def ai():
         return jsonify({"error": "No message provided"}), 400
 
     try:
-        # Start a chat session with automatic function calling enabled.
-        # This allows for a stateful conversation where the model can make multiple
-        # function calls if needed to fulfill a single user request.
         chat = model.start_chat(enable_automatic_function_calling=True)
-        
-        # Send the user's message and get the final response.
-        # The SDK handles the entire loop of:
-        # 1. Model -> function_call
-        # 2. SDK -> executes function
-        # 3. SDK -> sends result to Model
-        # 4. Model -> final text response
         response = chat.send_message(user_message)
 
-        # The final, user-facing text from the model.
         return jsonify({"ai": response.text})
-    except Exception as e:
-        # Log the full error for easier debugging
-        print(f"An error occurred during AI processing: {e}")
-        # Provide a user-friendly error message
+    except Exception as e: 
+        print(f"An error occurred during AI processing: {e}") 
         return jsonify({"ai": f"Sorry, an error occurred: {str(e)}"})
 
-if __name__ == "__main__":
-    # Set debug=False in a production environment
+if __name__ == "__main__": 
     debug_mode = os.environ.get("FLASK_ENV") == "development"
     app.run(debug=debug_mode)
