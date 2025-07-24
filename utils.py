@@ -119,7 +119,7 @@ def shutdown_pc():
     """Shuts down the computer.""" 
     os.system("shutdown /s /t 1")
     return "Shutting down the computer."
-
+    
 def take_screenshot():
     """Takes a screenshot of the entire screen and saves it to a file."""
     try:        
